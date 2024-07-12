@@ -1,0 +1,73 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from imblearn.over_sampling import SMOTE
+
+# 1. Data Collection and Cleaning
+def load_and_clean_data(file_path):
+    df = pd.read_csv(file_path)
+    
+    # Handle missing values
+    imputer = SimpleImputer(strategy='mean')
+    df_imputed = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
+    
+    return df_imputed
+
+# 2. Feature Engineering
+def engineer_features(df):
+    # Example feature: Average monthly spend
+    df['avg_monthly_spend'] = df['total_charges'] / df['tenure']
+    
+    # Example feature: Has multiple lines
+    df['has_multiple_lines'] = np.where(df['multiple_lines'] == 'Yes', 1, 0)
+    
+    return df
+
+# 3. Model Selection and Training
+def train_model(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # 4. Handle Class Imbalance
+    smote = SMOTE(random_state=42)
+    X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+    
+    # Scale features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train_resampled)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Train Random Forest model
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train_scaled, y_train_resampled)
+    
+    return model, X_test_scaled, y_test
+
+
+
+# Main execution
+if __name__ == "__main__":
+    # Load and preprocess data
+    data = load_and_clean_data('telecom_customer_data.csv')
+    data = engineer_features(data)
+    
+    # Prepare features and target
+    X = data.drop('churn', axis=1)
+    y = data['churn']
+    
+    # Train and evaluate model
+    model, X_test, y_test = train_model(X, y)
+    evaluate_model(model, X_test, y_test)
+    
+    # Display feature importance
+    feature_importance = get_feature_importance(model, X.columns)
+    print(feature_importance.head(10))
+
+    # 7. Model Deployment (placeholder)
+    print("Model ready for deployment")
+
+    # 8. Model Monitoring (placeholder)
+    print("Implement monitoring to track model performance over time")
